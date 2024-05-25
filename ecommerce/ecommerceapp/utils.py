@@ -1,15 +1,13 @@
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 import random
-
+from django.conf import settings
 def generate_otp():
     return str(random.randint(1000, 9999))
 
 def send_otp(phone_number, otp):
     # Initialize Twilio client with your Twilio credentials
-    account_sid = "ACc9ccfade44a44e8dfd940caca0058b27"
-    auth_token = "9e0ff7204247cbb8ca8b671046b26910"
-    client = Client(account_sid, auth_token)
+    client = Client(settings.account_sid, settings.auth_token)
 
     # Send OTP via SMS using Twilio
     try:
