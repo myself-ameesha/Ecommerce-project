@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from orders.models import OrderProduct
 from .forms import ReviewForm
+from django.http import HttpResponseRedirect
 
 # Create your views here.
 def store(request, category_slug=None):
@@ -109,10 +110,13 @@ def search(request):
 
 
 
+
+@login_required(login_url='loginn')
 def add_wishlist(request, product_slug):
     try:
         product = Product.objects.get(slug=product_slug)
         variations = []  # Initialize an empty list to store variations
+
 
         # Get the selected variations from the request
         if request.method == "POST":
@@ -126,16 +130,25 @@ def add_wishlist(request, product_slug):
                     except Variation.DoesNotExist:
                         pass
 
-        # Create the Wishlist item with the selected variations
-        wishlist_item = Wishlist.objects.create(user=request.user, product=product)
-        if variations:
-            wishlist_item.variations.set(variations)
 
+        # Check if the product is already in the cart
+        is_in_cart = CartItem.objects.filter(product=product, user=request.user).exists()
+       
+        if is_in_cart:
+            # If the product is already in the cart, remove it from the wishlist
+            Wishlist.objects.filter(user=request.user, product=product).delete()
+        else:
+            # If the product is not in the cart, add it to the wishlist
+            wishlist_item = Wishlist.objects.create(user=request.user, product=product)
+            if variations:
+                wishlist_item.variations.set(variations)
 
     except Product.DoesNotExist:
         return redirect('store')  # Redirect to home page if the product doesn't exist
-
-    return redirect('wishlist')  # Redirect to the wishlist page after adding the product
+   
+    # Redirect to the previous page
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+  
 
     
 
