@@ -35,13 +35,22 @@ def store(request, category_slug=None):
     return render(request, 'store/store.html',context)
 
 
-def product_details(request, category_slug, product_slug):
-    try:
-        single_product = Product.objects.get(category__slug=category_slug, slug=product_slug)
-        in_cart = CartItem.objects.filter(cart__cart_id=_cart_id(request), product=single_product).exists()
-        in_wishlist = Wishlist.objects.filter(user=request.user, product=single_product).exists()
-    except Exception as e:
-        raise e
+def product_detail(request, category_slug, product_slug):
+    # Get the single product or return 404 if not found
+    single_product = get_object_or_404(Product, category__slug=category_slug, slug=product_slug)
+
+    # Check if the product is in the cart
+    in_cart = CartItem.objects.filter(cart__cart_id=_cart_id(request), product=single_product).exists()
+
+    if request.user.is_authenticated:  # Check if the user is authenticated
+        try:
+            single_product = Product.objects.get(category__slug=category_slug, slug=product_slug)
+            in_cart = CartItem.objects.filter(cart__cart_id=_cart_id(request), product=single_product).exists()
+            in_wishlist = Wishlist.objects.filter(user=request.user, product=single_product).exists()
+        except Exception as e:
+            raise e
+    else:
+        in_wishlist = None
     
     orderproduct = None  # Initialize orderproduct as None
     if request.user.is_authenticated:  # Check if the user is authenticated
@@ -49,19 +58,26 @@ def product_details(request, category_slug, product_slug):
             orderproduct = OrderProduct.objects.filter(user=request.user, product_id=single_product.id).exists()
         except OrderProduct.DoesNotExist:
             pass
+    else:
+        orderproduct = None
+    
+    # Get the reviews if single_product is not None
+    reviews = []
+    if single_product:
 
     #Get the reviews
-    reviews = ReviewRating.objects.filter(product_id=single_product.id, status=True)
 
+        reviews = ReviewRating.objects.filter(product_id=single_product.id, status=True)
+    
     context = {
         'single_product': single_product,
-        'in_cart' : in_cart,
-        'orderproduct' : orderproduct,
+        'in_cart' : in_cart if single_product else False,
+        'orderproduct' : orderproduct if single_product else False,
         'in_wishlist': in_wishlist,
         'reviews' : reviews,
         
     }
-    return render(request, 'store/product_details.html', context)
+    return render(request, 'store/product_detail.html', context)
 
 
 
